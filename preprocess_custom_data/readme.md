@@ -1,43 +1,3 @@
-### Data structure
-
-The full data folder is organized as follows:
-
-
-```
-|-- NeuralHaircut/implicit-hair-data
-    |-- data
-        |-- h3ds
-        |-- monocular
-            |-- case_name
-                |-- video_frames  # after parsing .mp4 (optional)
-                |-- colmap # (optional) 
-                    |-- full_res_image
-                    |-- cameras.npz
-                    |-- point_cloud.ply
-                    |-- database.db
-                    |-- sparse
-                    |-- dense
-                    |-- sparse_txt
-
-                |-- cameras.npz    # camera parameters
-                |-- image
-                |-- mask
-                |-- hair_mask
-                |-- orientation_maps
-                |-- confidence_maps
-                |-- dif_mask.png # scalp masking for diffusion model
-                |-- cut_scalp_verts.pickle # scalp vertex for hairstyle
-                |-- head_prior.obj  # FLAME prior head
-                |-- head_prior_wo_eyes.obj # version wo eyes
-                |-- scale.pickle # scale the scene into unit sphere
-                |-- views.pickle # index of chosen views (optional)
-                |-- initialization_pixie # initialization for shape, expression, pose, ...
-                |-- openpose_kp # needed for mesh prior fitting (optional)   
-                |-- fitted_cameras.pth # Checkpoint for fitted cameras (optional)
-
-```
-
-
 ### For the first stage you need the following:
 
 
@@ -45,21 +5,14 @@ The full data folder is organized as follows:
 #### Step 1. (Optional) Run [COLMAP SfM](https://colmap.github.io/) to obtain cameras. 
 
 ##### Run commands
-
 ```bash
-colmap automatic_reconstructor --workspace_path  CASE_NAME/colmap  --image_path CASE_NAME/video_frames
+mkdir ../Datasets/usc_colmap/{subject_id} && colmap model_converter --input_path ./Datasets/usc_colmap/{subject_id}/sparse/0  --output_path C./Datasets/usc_colmap/{subject_id}/sparse_txt --output_type TXT
 ```
-
-```bash
-mkdir CASE_NAME/colmap/sparse_txt && colmap model_converter --input_path CASE_NAME/colmap/sparse/0  --output_path CASE_NAME/colmap/sparse_txt --output_type TXT
-```
-
-
 
 ##### To postprocess COLMAP's output run:
 
 ```bash
-python colmap_parsing.py --path_to_scene  ./implicit-hair-data/data/SCENE_TYPE/CASE --save_path ./implicit-hair-data/data/SCENE_TYPE/CASE/colmap
+python colmap_parsing.py --path_to_scene  ../Datasets/usc_colmap/{subject_id} --save_path .../Datasets/usc_colmap/{subject_id}/
 ```
 ##### Obtain:
 
@@ -74,7 +27,7 @@ Obtained ```colmap/point_cloud.ply``` is very noisy, so we are additionally defi
 #### Step 3. Transform cropped scene to lie in a unit sphere volume.
 
 ```bash
-python preprocess_custom_data/scale_scene_into_sphere.py --case CASE --scene_type SCENE_TYPE --path_to_data ./implicit-hair-data/data/
+python preprocess_custom_data/scale_scene_into_sphere.py --path_to_scene ../Datasets/usc_colmap/{subject_id}
 ```
 After this step in```./implicit-hair-data/data/SCENE_TYPE/CASE``` you would obtain ```scale.pickle```.
 
