@@ -74,7 +74,7 @@ def main(args):
     colors = np.stack(colors)
     
     output_folder = args.save_path
-    images_folder = os.path.join(args.path_to_scene, 'images')
+    images_folder = os.path.join(args.path_to_scene, '../', 'images')
     
     os.makedirs(output_folder, exist_ok=True)
     os.makedirs(os.path.join(output_folder, 'full_res_image'), exist_ok=True)

@@ -1,11 +1,9 @@
-import cv2 as cv
 import os 
 from torchvision import transforms
 import torchvision.transforms as T
 from PIL import Image
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
@@ -74,11 +72,6 @@ def valid(model, valloader, input_size, image_size, num_samples, gpus):
     flipped_idx = (15, 14, 17, 16, 19, 18)
     with torch.no_grad():
         for index, image in enumerate(valloader):
-            # num_images = image.size(0)
-            # print( image.size() )
-            # image = image.squeeze()
-            if index % 10 == 0:
-                print('%d  processd' % (index * 1))
             #====================================================================================            
             mul_outputs = []
             for scale in eval_scale:                
@@ -117,17 +110,15 @@ def valid(model, valloader, input_size, image_size, num_samples, gpus):
 
     
 def main(args):
-    print("Start calculating masks!")
-
-    os.makedirs(os.path.join(args.scene_path, 'mask'), exist_ok=True)
-    os.makedirs(os.path.join(args.scene_path, 'hair_mask'), exist_ok=True)
+    os.makedirs(os.path.join(args.path_to_scene, 'mask'), exist_ok=True)
+    os.makedirs(os.path.join(args.path_to_scene, 'hair_mask'), exist_ok=True)
     
-    images = sorted(os.listdir(os.path.join(args.scene_path, 'image')))
-    n_images = len(sorted(os.listdir(os.path.join(args.scene_path, 'image'))))
+    images = sorted(os.listdir(os.path.join(args.path_to_scene, 'full_res_image')))
+    n_images = len(sorted(os.listdir(os.path.join(args.path_to_scene, 'full_res_image'))))
     
     tens_list = []
     for i in range(n_images):
-        tens_list.append(T.ToTensor()(Image.open(os.path.join(args.scene_path, 'image', images[i]))))
+        tens_list.append(T.ToTensor()(Image.open(os.path.join(args.path_to_scene, 'full_res_image', images[i]))))
 
 #     load MODNET model for silhouette masks
     modnet = nn.DataParallel(MODNet(backbone_pretrained=False))
@@ -140,64 +131,75 @@ def main(args):
     for i in tqdm(range(len(tens_list))):
         silh_mask = obtain_modnet_mask(tens_list[i], modnet, 512)
         silh_list.append(silh_mask)
-        cv2.imwrite(os.path.join(args.scene_path, 'mask', images[i]), postprocess_mask(silh_mask)[0].astype(np.uint8))
+        cv2.imwrite(os.path.join(args.path_to_scene, 'mask', images[i]), postprocess_mask(silh_mask)[0].astype(np.uint8))
     
-    print("Start calculating hair masks!")
-#     load CDGNet for hair masks
+    # Load CDGNet for hair masks
     model = Res_Deeplab(num_classes=20)
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
-
     transform = transforms.Compose([
         transforms.ToTensor(),
         normalize,
     ])
+    resolution = None
+    basename = sorted([s.split('.')[0] for s in os.listdir(os.path.join(args.path_to_scene, 'full_res_image'))])[0]
+    fg_mask = np.asarray(Image.open(os.path.join(args.path_to_scene, 'mask', basename + '.png')))
+    resolution = (fg_mask.shape[1], fg_mask.shape[0])
+    # Check if hair masks are already calculated
+    hair_mask_path = args.path_to_scene + '/../masks'
+    if hair_mask_path is not None and os.path.exists(hair_mask_path):
+        print("Hair masks found, copying them to the scene folder")
+        hair_masks = os.listdir(hair_mask_path)
+        for i, hair_mask_file in enumerate(hair_masks):
+            hair_mask = Image.open(os.path.join(hair_mask_path, hair_mask_file))
+            hair_mask = np.asarray(hair_mask.resize(resolution, Image.BICUBIC))
+            Image.fromarray(hair_mask).save(os.path.join(args.path_to_scene, 'hair_mask', f'img_{i:04}.jpg'))
+    # Calculate hair masks
+    else:
+        print("Hair masks not found, calculating them using CDGNet")
+        state_dict = model.state_dict().copy()
+        state_dict_old = torch.load(args.CDGNET_ckpt, map_location='cpu')
 
-    state_dict = model.state_dict().copy()
-    state_dict_old = torch.load(args.CDGNET_ckpt, map_location='cpu')
+        for key, nkey in zip(state_dict_old.keys(), state_dict.keys()):
+            if key != nkey:
+                # remove the 'module.' in the 'key'
+                state_dict[key[7:]] = deepcopy(state_dict_old[key])
+            else:
+                state_dict[key] = deepcopy(state_dict_old[key])
 
-    for key, nkey in zip(state_dict_old.keys(), state_dict.keys()):
-        if key != nkey:
-            # remove the 'module.' in the 'key'
-            state_dict[key[7:]] = deepcopy(state_dict_old[key])
-        else:
-            state_dict[key] = deepcopy(state_dict_old[key])
+        model.load_state_dict(state_dict)
+        model.eval()
+        model.cuda()
 
-    model.load_state_dict(state_dict)
-    model.eval()
-    model.cuda()
+        basenames = sorted([s.split('.')[0] for s in os.listdir(os.path.join(args.path_to_scene, 'full_res_image'))])
+        input_size = (1024, 1024)
 
-    basenames = sorted([s.split('.')[0] for s in os.listdir(os.path.join(args.scene_path, 'image'))])
-    input_size = (1024, 1024)
+        raw_images = []
+        images = []
+        masks = []
+        for basename in basenames:
+            img = Image.open(os.path.join(args.path_to_scene, 'full_res_image', basename + '.png'))
+            raw_images.append(np.asarray(img))
+            img = transform(img.resize(input_size))[None]
+            img = torch.cat([img, torch.flip(img, dims=[-1])], dim=0)
+            mask = np.asarray(Image.open(os.path.join(args.path_to_scene, 'mask', basename + '.png')))
+            images.append(img)
+            masks.append(mask)
 
-    raw_images = []
-    images = []
-    masks = []
-    for basename in basenames:
-        img = Image.open(os.path.join(args.scene_path, 'image', basename + '.jpg'))
-        raw_images.append(np.asarray(img))
-        img = transform(img.resize(input_size))[None]
-        img = torch.cat([img, torch.flip(img, dims=[-1])], dim=0)
-        mask = np.asarray(Image.open(os.path.join(args.scene_path, 'mask', basename + '.jpg')))
-        images.append(img)
-        masks.append(mask)
-
-    image_size = (mask.shape[1], mask.shape[0])
-    parsing_preds, hpredLst, wpredLst = valid(model, images, input_size, image_size, len(images), gpus=1)
-
-    for i in range(len(images)):
-        hair_mask = np.asarray(Image.fromarray((parsing_preds[i] == 2)).resize(image_size, Image.BICUBIC))
-        hair_mask = hair_mask * masks[i]
-        Image.fromarray(hair_mask).save(os.path.join(args.scene_path, 'hair_mask', basenames[i] + '.jpg'))
+        parsing_preds, hpredLst, wpredLst = valid(model, images, input_size, resolution, len(images), gpus=1)
+        for i in range(len(images)):
+            hair_mask = np.asarray(Image.fromarray((parsing_preds[i] == 2)).resize(resolution, Image.BICUBIC))
+            hair_mask = hair_mask * masks[i]
+            Image.fromarray(hair_mask).save(os.path.join(args.path_to_scene, 'hair_mask', basenames[i] + '.jpg'))
    
-    print('Results saved in folder: ', os.path.join(args.scene_path, 'hair_mask'))
+    print('Results saved in folder: ', os.path.join(args.path_to_scene, 'hair_mask'))
         
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(conflict_handler='resolve')
 
-    parser.add_argument('--scene_path', default='./implicit-hair-data/data/h3ds/168f8ca5c2dce5bc/', type=str)
+    parser.add_argument('--path_to_scene', default='../Datasets/usc_colmap/00050/neural_haircut', type=str)
     parser.add_argument('--MODNET_ckpt', default='./MODNet/pretrained/modnet_photographic_portrait_matting.ckpt', type=str)
-    parser.add_argument('--CDGNET_ckpt', default='./cdgnet/snapshots/LIP_epoch_149.pth', type=str)
+    parser.add_argument('--CDGNET_ckpt', default='./CDGNet/snapshots/LIP_epoch_149.pth', type=str)
 
     args, _ = parser.parse_known_args()
     args = parser.parse_args()
