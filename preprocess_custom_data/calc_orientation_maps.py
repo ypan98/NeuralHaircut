@@ -17,7 +17,6 @@ def rgb2gray(rgb):
 
 def generate_gabor_filters(sigma_x, sigma_y, freq, num_filters):
     thetas = np.linspace(0, math.pi * (num_filters - 1) / num_filters, num_filters)
-    print(thetas / math.pi * 180)
     kernels = []
     for theta in thetas:
         kernel = np.real(gabor_kernel(freq, theta=math.pi - theta, sigma_x=sigma_x, sigma_y=sigma_y))
@@ -33,7 +32,7 @@ def calc_orients(img, kernels):
     return F_orients
 
 
-def calc_confidences(F_orients, orientation_map):
+def calc_confidences(F_orients, orientation_map, num_filters):
     orients_bins = np.linspace(0, math.pi * (num_filters - 1) / num_filters, num_filters)
     orients_bins = orients_bins[:, None, None]
     
@@ -56,18 +55,16 @@ def main(args):
     
     kernels = generate_gabor_filters(args.sigma_x, args.sigma_y, args.freq, args.num_filters)
     
-    img_list = sorted(os.listdir(img_path))
+    img_list = sorted(os.listdir(args.img_path))
     for img_name in tqdm.tqdm(img_list):
         basename = img_name.split('.')[0]
-        img = np.array(Image.open(os.path.join(img_path, img_name)))
+        img = np.array(Image.open(os.path.join(args.img_path, img_name)))
         F_orients = calc_orients(img, kernels)
         orientation_map = F_orients.argmax(0)
-        orientation_map_rad = orientation_map.astype('float16') / num_filters * math.pi
-        confidence_map = calc_confidences(F_orients, orientation_map_rad)
-
-        cv2.imwrite(f'{orient_dir}/{basename}.png', orientation_map.astype('uint8'))
-        np.save(f'{conf_dir}/{basename}.npy', confidence_map.astype('float16'))
-
+        orientation_map_rad = orientation_map.astype('float16') / args.num_filters * math.pi
+        confidence_map = calc_confidences(F_orients, orientation_map_rad, args.num_filters)
+        cv2.imwrite(f'{args.orient_dir}/{basename}.png', orientation_map.astype('uint8'))
+        np.save(f'{args.conf_dir}/{basename}.npy', confidence_map.astype('float16'))
 
         
 if __name__ == "__main__":

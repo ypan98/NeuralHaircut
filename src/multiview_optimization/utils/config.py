@@ -8,8 +8,7 @@ import os
 
 cfg = CN()
 
-abs_pixie_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-cfg.pixie_dir = '/Vol0/user/v.sklyarova/PIXIE/PIXIE'
+cfg.pixie_dir = 'pretrained_models/pixie_smplx'
 cfg.device = 'cuda'
 cfg.device_id = '0'
 cfg.pretrained_modelpath = os.path.join(cfg.pixie_dir, 'data', 'pixie_model.tar')
@@ -30,16 +29,16 @@ cfg.model = CN()
 cfg.model.topology_path = os.path.join(cfg.pixie_dir, 'data', 'SMPL_X_template_FLAME_uv.obj') 
 cfg.model.topology_smplxtex_path = os.path.join(cfg.pixie_dir, 'data', 'smplx_tex.obj')
 cfg.model.topology_smplx_hand_path = os.path.join(cfg.pixie_dir, 'data', 'smplx_hand.obj')
-cfg.model.smplx_model_path = os.path.join(cfg.pixie_dir, 'data', 'SMPLX_NEUTRAL_2020.npz')
+cfg.model.smplx_model_path = os.path.join(cfg.pixie_dir, 'SMPLX_NEUTRAL_2020.npz')
 cfg.model.face_mask_path = os.path.join(cfg.pixie_dir, 'data', 'uv_face_mask.png')
 cfg.model.face_eye_mask_path = os.path.join(cfg.pixie_dir, 'data', 'uv_face_eye_mask.png')
 cfg.model.tex_path = os.path.join('/Vol0/user/v.sklyarova/eccv/latent-texture-avatar', 'data', 'FLAME_albedo_from_BFM.npz')
-cfg.model.extra_joint_path = os.path.join(cfg.pixie_dir, 'data', 'smplx_extra_joints.yaml')
+cfg.model.extra_joint_path = os.path.join(cfg.pixie_dir, 'smplx_extra_joints.yaml')
 cfg.model.j14_regressor_path = os.path.join(cfg.pixie_dir, 'data', 'SMPLX_to_J14.pkl')
 cfg.model.flame2smplx_cached_path = os.path.join(cfg.pixie_dir, 'data', 'flame2smplx_tex_1024.npy')
 cfg.model.smplx_tex_path = os.path.join(cfg.pixie_dir, 'data', 'smplx_tex.png')
 cfg.model.mano_ids_path = os.path.join(cfg.pixie_dir, 'data', 'MANO_SMPLX_vertex_ids.pkl')
-cfg.model.flame_ids_path = os.path.join(cfg.pixie_dir, 'data', 'SMPL-X__FLAME_vertex_ids.npy')
+cfg.model.flame_ids_path = os.path.join(cfg.pixie_dir, 'SMPL-X__FLAME_vertex_ids.npy')
 cfg.model.uv_size = 256
 cfg.model.n_shape = 200
 cfg.model.n_tex = 50
