@@ -319,7 +319,6 @@ class MonocularDataset(Dataset):
         if conf.get('path_to_scale', None) is not None:
             with open(conf['path_to_scale'], 'rb') as f:
                 transform = pickle.load(f)
-                print('upload transform', transform, conf['path_to_scale'])
                 self.scale_mat[:3, :3] *= transform['scale']
                 self.scale_mat[:3, 3] = np.array(transform['translation'])
     

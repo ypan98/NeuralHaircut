@@ -10,12 +10,11 @@ def main(args):
     pc = np.array(trimesh.load(os.path.join(args.path_to_scene, filename)).vertices)
 
     translation = (pc.min(0) + pc.max(0)) / 2
-    scale = np.linalg.norm(pc - translation, axis=-1).max().item() / 1.1
+    # scale = np.linalg.norm(pc - translation, axis=-1).max().item() / 1.1
+    scale = np.linalg.norm(pc - translation, axis=-1).max().item()
 
     tr = (pc - translation) / scale
-    assert tr.min() >= -1 and tr.max() <= 1
-
-    print('Scaling into the sphere', tr.min(), tr.max())
+    assert tr.min() >= -1 and tr.max() <= 1, f"Scaling failed: tr.min={tr.min()} tr.max={tr.max()}"
 
     d = {'scale': scale,
         'translation': list(translation)}

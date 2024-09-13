@@ -63,7 +63,6 @@ class Multiview_dataset(Dataset):
             scale_mat = np.eye(4, dtype=np.float32)        
             with open(self.scale_path, 'rb') as f:
                 transform = pickle.load(f)
-                print('upload transform', transform, self.scale_path)
                 scale_mat[:3, :3] *= transform['scale']
                 scale_mat[:3, 3] = np.array(transform['translation'])
 
@@ -110,36 +109,36 @@ class Multiview_dataset(Dataset):
         lmks3d = [fa3d.get_landmarks_from_image(images_np[i])[0]  if fa3d.get_landmarks_from_image(images_np[i]) else None for i in range(len(imgs_list))]  
 
         # took views that have openpose keypoints
-        data_openpose = []
-        sns = sorted(os.listdir(self.openpose_kp_path))
-        for sn in sns:
-            with open(os.path.join(self.openpose_kp_path, sn), 'r') as f:
-                data_openpose.append(json.load(f))
+        use_openpose = self.openpose_kp_path is not None and os.path.exists(self.openpose_kp_path)
+        if use_openpose:
+            data_openpose = []
+            sns = sorted(os.listdir(self.openpose_kp_path))
+            for sn in sns:
+                with open(os.path.join(self.openpose_kp_path, sn), 'r') as f:
+                    data_openpose.append(json.load(f))
+            self.good_views  = []
+            mapping = dict(zip(filter_idx, np.arange(len(imgs_list))))
+            unmapping = dict(zip(np.arange(len(imgs_list)), filter_idx))
+            for i in range(len(data_openpose)):
+                if i in filter_idx:
+                    if len(data_openpose[i]['people'])>0:
+                        if sum(data_openpose[i]['people'][0]['face_keypoints_2d']) > 0 and sum(data_openpose[i]['people'][0]['pose_keypoints_2d'])>0 :    
+                            self.good_views.append(mapping[i])        
+            self.num_views = len(self.good_views)
+            self.good_views = [i for i in self.good_views if lmks[i] is not None] # For some views otained landmarks could be bad
+    #         self.good_views = [0, 9, 27, 28, 30, 31, 33, 34, 35, 63] # person_1
+            self.nimages = min(len(self.good_views), self.batch_size)
+            self.good_views = np.array(self.good_views)[:self.nimages]
+            self.openpose_data = OpenposeData(path=self.openpose_kp_path, views=self.good_views, device=self.device, filter_views_mapping=unmapping)    
 
-        self.good_views  = []
-        mapping = dict(zip(filter_idx, np.arange(len(imgs_list))))
-        unmapping = dict(zip(np.arange(len(imgs_list)), filter_idx))
-
-
-        for i in range(len(data_openpose)):
-            if i in filter_idx:
-                if len(data_openpose[i]['people'])>0:
-                    if sum(data_openpose[i]['people'][0]['face_keypoints_2d']) > 0 and sum(data_openpose[i]['people'][0]['pose_keypoints_2d'])>0 :    
-                        self.good_views.append(mapping[i])        
-
-
-        self.num_views = len(self.good_views)
-
+        if not use_openpose:
+            self.good_views = []
+            for i, (lmk, lmk3d) in enumerate(zip(lmks, lmks3d)):
+                if lmk is not None and lmk3d is not None:
+                    self.good_views.append(i)
+            self.nimages = min(len(self.good_views), self.batch_size)
+            self.good_views = np.array(self.good_views)[:self.nimages]
         
-        self.good_views = [i for i in self.good_views if lmks[i] is not None] # For some views otained landmarks could be bad
-        
-#         self.good_views = [0, 9, 27, 28, 30, 31, 33, 34, 35, 63] # person_1
-
-        self.nimages = min(len(self.good_views), self.batch_size)
-        self.good_views = np.array(self.good_views)[:self.nimages]
-        
-        self.openpose_data = OpenposeData(path=self.openpose_kp_path, views=self.good_views, device=self.device, filter_views_mapping=unmapping)    
-
         self.lmks = torch.from_numpy(np.stack([lmks[i] for i in self.good_views]))
         self.lmks3d = torch.from_numpy(np.stack([lmks3d[i] for i in self.good_views]))
         self.images = images[self.good_views]
@@ -150,8 +149,7 @@ class Multiview_dataset(Dataset):
         return torch.tensor(self.good_views).to(self.device)
         
     def __getitem__(self, index):
-        print(index)
-        return {
+        data = {
                 'img': self.images[index].to(self.device), 
                 'lmks': self.lmks[index].to(self.device),
                 'lmks3d':self.lmks3d[index].to(self.device), 
@@ -159,8 +157,10 @@ class Multiview_dataset(Dataset):
                 'extrinsics_tvec': self.poses[index, :3, 3].to(self.device),
                 'frame_ids': torch.tensor(index, dtype=torch.long).to(self.device),
                 'intrinsics': self.intrinsics_all[index].to(self.device),
-                'openpose_lmks': self.openpose_data.get_sample(index)
-               } 
-    
+        }
+        # check if has openpose data
+        if hasattr(self, 'openpose_data'):
+            data['openpose_lmks'] = self.openpose_data.get_sample(index)
+        return data
     def __len__(self):
         return self.nimages 
