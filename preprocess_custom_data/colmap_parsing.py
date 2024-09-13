@@ -77,7 +77,7 @@ def main(args):
     images_folder = os.path.join(args.path_to_scene, '../', 'images')
     
     os.makedirs(output_folder, exist_ok=True)
-    os.makedirs(os.path.join(output_folder, 'full_res_image'), exist_ok=True)
+    os.makedirs(os.path.join(output_folder, 'image'), exist_ok=True)
     
     cameras = []
     debug = False
@@ -86,7 +86,7 @@ def main(args):
         filename = f'img_{i:04}.png'
         T = data[k]
         cameras.append(T)
-        shutil.copyfile(os.path.join(images_folder, k), os.path.join(output_folder, 'full_res_image', filename))
+        shutil.copyfile(os.path.join(images_folder, k), os.path.join(output_folder, 'image', filename))
 
     np.savez(os.path.join(output_folder, 'cameras.npz'), np.stack(cameras))
     trimesh.points.PointCloud(points).export(os.path.join(output_folder, 'point_cloud.ply'));

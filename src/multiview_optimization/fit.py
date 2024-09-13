@@ -99,7 +99,7 @@ if __name__ == '__main__':
             'cut_flame_head': args.cut_flame_head
         },
         'dataset': {
-            'image_path': args.data_path + "/full_res_image",
+            'image_path': args.data_path + "/image",
             'scale_path': args.data_path + "/scale.pickle",
             'camera_path': args.data_path + "/cameras.npz",
             'pixie_init_path': args.data_path + "/initialization_pixie",

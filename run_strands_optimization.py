@@ -180,8 +180,6 @@ class Runner:
         copyfile(self.hair_conf_path, os.path.join(self.base_exp_dir, 'recording', 'hair_config.yaml'))
 
 if __name__ == '__main__':
-    print('Hello Wooden')
-
     FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
     logging.basicConfig(level=logging.DEBUG, format=FORMAT)
 

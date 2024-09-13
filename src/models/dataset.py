@@ -25,7 +25,6 @@ from src.utils.util import glob_imgs, tensor2image
 class Dataset:
     def __init__(self, conf):
         super(Dataset, self).__init__()
-        print('Load data: Begin')
         self.device = torch.device('cuda')
         self.conf = conf
 
@@ -63,7 +62,6 @@ class Dataset:
         self.scale_mats_np = [camera_dict['scale_mat_%d' % idx].astype(np.float32) for idx in range(self.n_images)]
 
         self.filter_views()
-        print("Number of views:", self.n_images)
         self.images_np = np.stack([cv.imread(im_name) for im_name in self.images_lis]) / 255.0
 
         self.masks_np = np.stack([cv.imread(im_name) for im_name in self.masks_lis]) / 255.0
@@ -142,8 +140,6 @@ class Dataset:
             # halfway between inscribed by / circumscribed about the pixel.
             self.radii[img_idx] = dx * 2 / math.sqrt(12)
         self.radii = self.radii.transpose(1, 2)[..., None] # [n_images, H, W, 1]
-
-        print('Load data: End')
     
     def gen_rays_at(self, img_idx, resolution_level=1):
         """
@@ -342,7 +338,6 @@ class MonocularDataset(Dataset):
             self.filter_views()
 
         self.n_images  = len(self.images_lis)
-        print("Number of views:", self.n_images) 
         
         for i in range(self.n_images):
             world_mat = self.cameras[i]  
@@ -408,7 +403,6 @@ class MonocularDataset(Dataset):
             # halfway between inscribed by / circumscribed about the pixel.
             self.radii[img_idx] = dx * 2 / math.sqrt(12)
         self.radii = self.radii.transpose(1, 2)[..., None] # [n_images, H, W, 1]
-        print('Load data: End')
     
     def filter_views(self):
         print('Filter scene!')

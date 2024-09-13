@@ -129,6 +129,7 @@ dmypy.json
 .pyre/
 
 experiments/
+exp/
 
 pretrained_models
 CDGNet

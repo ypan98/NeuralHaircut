@@ -63,6 +63,7 @@ def main(args):
         orientation_map = F_orients.argmax(0)
         orientation_map_rad = orientation_map.astype('float16') / args.num_filters * math.pi
         confidence_map = calc_confidences(F_orients, orientation_map_rad, args.num_filters)
+        confidence_map = np.nan_to_num(confidence_map)
         cv2.imwrite(f'{args.orient_dir}/{basename}.png', orientation_map.astype('uint8'))
         np.save(f'{args.conf_dir}/{basename}.npy', confidence_map.astype('float16'))
 

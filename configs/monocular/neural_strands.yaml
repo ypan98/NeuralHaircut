@@ -7,14 +7,14 @@ general: {
 }
 
 dataset: {
-    "data_dir":  "./implicit-hair-data/data/monocular/CASE_NAME",
+    "data_dir":  "DATASET_PATH/CASE_NAME/neural_haircut",
     "render_cameras_name":  "cameras.npz",
     "object_cameras_name":  "cameras.npz",
     "orient_num_bins":  180,
     "mask_based_ray_sampling":  false,
     "mask_binarization_threshold":  0.5,
-    "path_to_mesh_prior":  "./implicit-hair-data/data/monocular/CASE_NAME/head_prior_wo_eyes.obj",
-    "path_to_scale": "./implicit-hair-data/data/monocular/CASE_NAME/scale.pickle",
+    "path_to_mesh_prior":  "DATASET_PATH/CASE_NAME/neural_haircut/head_prior_wo_eyes.obj",
+    "path_to_scale": "DATASET_PATH/CASE_NAME/neural_haircut/scale.pickle",
     "views_idx":  '',
     "fitted_camera_path": '',
 }
@@ -59,7 +59,7 @@ train: {
     "head_prior_normal_weight": 0.01,
     "head_prior_sdf_weight": 0.1,
      
-    "pretrain_path": "./implicit-hair-data/data/monocular/CASE_NAME/ckpt_final.pth",
+    "pretrain_path": "DATASET_PATH/CASE_NAME/neural_haircut/ckpt_final.pth",
     "pretrain_strands_path": "",
 }
 

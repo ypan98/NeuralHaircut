@@ -113,12 +113,12 @@ def main(args):
     os.makedirs(os.path.join(args.path_to_scene, 'mask'), exist_ok=True)
     os.makedirs(os.path.join(args.path_to_scene, 'hair_mask'), exist_ok=True)
     
-    images = sorted(os.listdir(os.path.join(args.path_to_scene, 'full_res_image')))
-    n_images = len(sorted(os.listdir(os.path.join(args.path_to_scene, 'full_res_image'))))
+    images = sorted(os.listdir(os.path.join(args.path_to_scene, 'image')))
+    n_images = len(sorted(os.listdir(os.path.join(args.path_to_scene, 'image'))))
     
     tens_list = []
     for i in range(n_images):
-        tens_list.append(T.ToTensor()(Image.open(os.path.join(args.path_to_scene, 'full_res_image', images[i]))))
+        tens_list.append(T.ToTensor()(Image.open(os.path.join(args.path_to_scene, 'image', images[i]))))
 
 #     load MODNET model for silhouette masks
     modnet = nn.DataParallel(MODNet(backbone_pretrained=False))
@@ -142,7 +142,7 @@ def main(args):
         normalize,
     ])
     resolution = None
-    basename = sorted([s.split('.')[0] for s in os.listdir(os.path.join(args.path_to_scene, 'full_res_image'))])[0]
+    basename = sorted([s.split('.')[0] for s in os.listdir(os.path.join(args.path_to_scene, 'image'))])[0]
     fg_mask = np.asarray(Image.open(os.path.join(args.path_to_scene, 'mask', basename + '.png')))
     resolution = (fg_mask.shape[1], fg_mask.shape[0])
     # Check if hair masks are already calculated
@@ -171,14 +171,14 @@ def main(args):
         model.eval()
         model.cuda()
 
-        basenames = sorted([s.split('.')[0] for s in os.listdir(os.path.join(args.path_to_scene, 'full_res_image'))])
+        basenames = sorted([s.split('.')[0] for s in os.listdir(os.path.join(args.path_to_scene, 'image'))])
         input_size = (1024, 1024)
 
         raw_images = []
         images = []
         masks = []
         for basename in basenames:
-            img = Image.open(os.path.join(args.path_to_scene, 'full_res_image', basename + '.png'))
+            img = Image.open(os.path.join(args.path_to_scene, 'image', basename + '.png'))
             raw_images.append(np.asarray(img))
             img = transform(img.resize(input_size))[None]
             img = torch.cat([img, torch.flip(img, dims=[-1])], dim=0)

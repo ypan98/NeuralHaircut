@@ -14,7 +14,6 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 from shutil import copyfile
 from tqdm import tqdm
-from pyhocon import ConfigFactory
 from src.models.dataset import Dataset, MonocularDataset
 from src.models.fields import RenderingNetwork, SDFNetwork, SingleVarianceNetwork, NeRF
 from src.models.renderer import extract_orientation
@@ -23,8 +22,6 @@ from src.models.head_prior import HeadPriorMesh
 from src.models.renderer import NeusHairRenderer
 from pathlib import Path
 from datetime import datetime
-import math
-import random
 import yaml
 
 from src.models.cameras import OptimizableCameras
@@ -36,14 +33,17 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
+def add_config(parser):
+    pass
+
 class Runner:
-    def __init__(self, conf_path, mode='train', case='CASE_NAME', is_continue=False, checkpoint_name=None,  exp_name=None,  train_cameras=False):
+    def __init__(self, conf_path, mode='train', dataset_path="", case='CASE_NAME', is_continue=False, checkpoint_name=None,  exp_name=None,  train_cameras=False):
         self.device = torch.device('cuda')
 
         # Configuration of geometry      
         self.conf_path = conf_path 
         with open(conf_path, 'r') as f:
-            replaced_conf = str(yaml.load(f, Loader=yaml.Loader)).replace('CASE_NAME', case)
+            replaced_conf = str(yaml.load(f, Loader=yaml.Loader)).replace('CASE_NAME', case).replace('DATASET_PATH', dataset_path)
             self.conf = yaml.load(replaced_conf, Loader=yaml.Loader)
 
         if exp_name is not None:
@@ -182,6 +182,9 @@ class Runner:
         # Backup codes and configs for debug
         if self.mode[:5] == 'train':
             self.file_backup()
+            
+        # for param in self.hair_network.parameters():
+        #     param.requires_grad = False
 
     
     def sample_one_image(self, batch=None):
@@ -222,8 +225,9 @@ class Runner:
         self.writer = SummaryWriter(log_dir=os.path.join(self.base_exp_dir, 'logs'))
         self.update_learning_rate()
         res_step = self.end_iter - self.iter_step
-
-        for iter_i in tqdm(range(res_step)):
+        progress_bar = tqdm(range(res_step))
+        running_loss = 0.0
+        for iter_i in progress_bar:
             self.hair_network.embed_fn_fine.current_iter = self.iter_step
             self.sdf_network.embed_fn_fine.current_iter = self.iter_step
             self.color_network.embedview_fn.current_iter = self.iter_step
@@ -311,7 +315,6 @@ class Runner:
 
             eikonal_loss_head = gradient_error_head
 
-
             mask_fine_loss = F.binary_cross_entropy(weight_sum.clip(1e-3, 1.0 - 1e-3), mask)
 
             loss = color_fine_loss +\
@@ -319,24 +322,20 @@ class Runner:
                    mask_fine_loss * self.mask_weight
 
             
-            orient_fine_loss = orient_coarse_loss = 0.0
+            orient_fine_loss = 0.0
 
             if self.orient_weight:
-
                 orient_angle_fine = project_orient_to_camera(orient_3d=sampled_orient_fine, org_3d=pts_fine, cam_intr=cam_intr, cam_extr=cam_extr)
-
                 # Get masks for orientation loss
                 orient_mask = hair_mask
                 if self.conf['train']['orient_use_conf']:
-                    orient_mask = orient_mask * orient_conf                    
-
+                    orient_mask = orient_mask * orient_conf       
                 orient_mask_sum = orient_mask.sum() + 1e-5
                 orient_fine_error = torch.min((orient_angle_fine - orient_angle).abs(),
                                               torch.min((orient_angle_fine - orient_angle - np.pi).abs(), 
                                                         (orient_angle_fine - orient_angle + np.pi).abs()))
                 orient_fine_error = orient_fine_error * orient_mask 
                 orient_fine_loss = orient_fine_error.mean() * (orient_fine_error.shape[0] / orient_mask_sum)
-
             hair_mask_fine_loss = F.binary_cross_entropy(weight_hair_sum.clip(1e-3, 1.0 - 1e-3), hair_mask)
 
 
@@ -365,6 +364,11 @@ class Runner:
             self.optimizer.step()
             if self.camera_model is not None and self.iter_step > self.tune_cameras_start and self.iter_step < self.tune_cameras_end:
                 self.optimizer_camera.step()
+                
+            # update loss in the progress bar
+            running_loss += loss.item()
+            avg_loss = running_loss / (iter_i + 1)
+            progress_bar.set_postfix(loss=avg_loss)
             
             losses = {}
 
@@ -786,7 +790,6 @@ class Runner:
         H, W, _ = rays_o.shape
         rays_o = rays_o.transpose(0, 1).reshape(-1, 3).split(800)
         rays_d = rays_d.transpose(0, 1).reshape(-1, 3).split(800)
-
         radii = radii.reshape(-1, 1).split(800)
 
         out_rgb_fine = []
@@ -813,8 +816,6 @@ class Runner:
 
 
 if __name__ == '__main__':
-    print('Hello Wooden')
-
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
     FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
@@ -826,6 +827,7 @@ if __name__ == '__main__':
     parser.add_argument('--mcube_threshold', type=float, default=0.0)
     parser.add_argument('--is_continue', default=False, action="store_true")
     parser.add_argument('--gpu', type=int, default=0)
+    parser.add_argument('--dataset_path', type=str, default="../Datasets/usc_colmap")
     parser.add_argument('--case', type=str, default='')
     parser.add_argument('--no_filtering', default=False, action="store_true")
     parser.add_argument('--checkpoint', type=str, default=None, help='Checkpoint to continue training')
@@ -835,8 +837,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     torch.cuda.set_device(args.gpu)
-    print(args.train_cameras)
-    runner = Runner(args.conf, args.mode, args.case, args.is_continue, checkpoint_name=args.checkpoint, exp_name=args.exp_name,  train_cameras=args.train_cameras)
+    runner = Runner(args.conf, args.mode, args.dataset_path, args.case, args.is_continue, checkpoint_name=args.checkpoint, exp_name=args.exp_name,  train_cameras=args.train_cameras)
 
     if args.mode == 'train':
         runner.train()
@@ -848,6 +849,6 @@ if __name__ == '__main__':
         img_idx_1 = int(img_idx_1)
         runner.off_sdfpolate_view(img_idx_0, img_idx_1)
     elif args.mode.startswith('render'):
-        # img_idx = int(args.mode.split('_')[1])
         for i in range(runner.dataset.n_images):
+            print("Rendering image", i)
             runner.render_img(i, 1)

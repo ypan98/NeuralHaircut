@@ -92,8 +92,6 @@ class HairSDFNetwork(nn.Module):
                     layers_orient.append(nn.ReLU())
 
             self.orient_head = nn.Sequential(*layers_orient)
-        
-        print(self)
 
     def forward(self, inputs, calc_orient=False):
         inputs = inputs * self.scale
