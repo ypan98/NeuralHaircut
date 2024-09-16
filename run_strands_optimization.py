@@ -59,6 +59,7 @@ class Runner:
         
         os.makedirs(self.base_exp_dir, exist_ok=True)                    
         os.makedirs(os.path.join(self.base_exp_dir, 'meshes'), exist_ok=True)
+        os.makedirs(os.path.join(self.base_exp_dir, 'strands'), exist_ok=True)
         os.makedirs(os.path.join(self.base_exp_dir, 'hair_primitives'), exist_ok=True)
         
         self.dataset = MonocularDataset(self.conf['dataset'])
@@ -132,25 +133,26 @@ class Runner:
             if losses is not None:
                 for k, v in losses.items():
                     self.writer.add_scalar(f'Loss/{k}', v, self.iter_step)
-
-            if self.iter_step % self.report_freq == 0:
-                self.save_strands_pointcloud()
             
             if self.iter_step % len(image_perm) == 0:
                 image_perm = self.get_image_perm()
             
             if self.iter_step % self.report_freq == 0:
+                self.save_strands_pointcloud()
                 self.hair_primitives_trainer.save_weights(os.path.join(self.base_exp_dir, 'hair_primitives', 'ckpt_{:0>6d}.pth'.format(self.iter_step)))
-                
+                self.save_strands()
     
     def save_strands_pointcloud(self):
         if self.hair_primitives_trainer:
             strands_origins = self.hair_primitives_trainer.strands_origins.reshape(-1, 100, 3)
             cols = torch.cat((torch.rand(strands_origins.shape[0], 3).unsqueeze(1).repeat(1, 100, 1), torch.ones(strands_origins.shape[0], 100, 1)), dim=-1).reshape(-1, 4).cpu()           
             trimesh.PointCloud(strands_origins.reshape(-1, 3).detach().cpu(), colors=cols).export(os.path.join(self.base_exp_dir, 'meshes', '{:0>8d}_strands_points.ply'.format(self.iter_step)))
-            strands_np = strands_origins.detach().cpu().numpy()
-            np.save(os.path.join(self.base_exp_dir, 'meshes', '{:0>8d}_strands_points.npy'.format(self.iter_step)), strands_np)
     
+    def save_strands(self):
+        if self.hair_primitives_trainer:
+            strands_origins = self.hair_primitives_trainer.strands_origins.reshape(-1, 100, 3)
+            strands_np = strands_origins.detach().cpu().numpy()
+            np.save(os.path.join(self.base_exp_dir, 'strands', '{:0>8d}_strands_points.npy'.format(self.iter_step)), strands_np)
     
     def get_image_perm(self):
         return torch.randperm(self.dataset.n_images)

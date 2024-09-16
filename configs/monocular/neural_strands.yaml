@@ -22,8 +22,7 @@ dataset: {
 train: {
     "learning_rate": 0.0005,
     "learning_rate_alpha": 0.05,
-    # "end_iter": 300000,
-    "end_iter": 1000, # for testing
+    "end_iter": 300000,
     "n_images_sampling": 32,
     "bs_sampling": 32,
 
@@ -45,8 +44,7 @@ train: {
     "val_freq":  1000,
     "val_orients_freq": 1000,
     "val_mesh_freq": 1000,
-    # "report_freq": 1000,
-    "report_freq": 1,
+    "report_freq": 1000,
 
     "binarize_gt_masks": true,
 
