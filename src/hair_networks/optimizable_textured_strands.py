@@ -176,7 +176,6 @@ class OptimizableTexturedStrands(nn.Module):
             
             # Load scalp mask for hairstyle
             self.diffuse_mask = diffusion_cfg.get('diffuse_mask', None) 
-            print('diffuse mask', self.diffuse_mask)
             
             if self.diffuse_mask: 
                 self.diffuse_mask = torch.tensor(cv2.imread(self.diffuse_mask) / 255)[:, :, :1].squeeze(-1).cuda()

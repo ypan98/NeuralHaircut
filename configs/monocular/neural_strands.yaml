@@ -1,5 +1,5 @@
 general: {
-    "base_exp_dir": "./exp/CASE_NAME/soft-blending_hair-sdf",
+    "base_exp_dir": "./exp/CASE_NAME",
     "recording": [
         "./",
         "./src/models"
@@ -22,7 +22,8 @@ dataset: {
 train: {
     "learning_rate": 0.0005,
     "learning_rate_alpha": 0.05,
-    "end_iter": 300000,
+    # "end_iter": 300000,
+    "end_iter": 100, # for testing
     "n_images_sampling": 32,
     "bs_sampling": 32,
 
@@ -38,13 +39,14 @@ train: {
     "val_orients_resolution": 128,
     "warm_up_end": 5000,
     "anneal_end": 0,
-    "use_white_bkgd": true,
+    "use_white_bkgd": false,
 
     "save_freq": 1000,
     "val_freq":  1000,
     "val_orients_freq": 1000,
     "val_mesh_freq": 1000,
-    "report_freq": 1000,
+    # "report_freq": 1000,
+    "report_freq": 1,
 
     "binarize_gt_masks": true,
 

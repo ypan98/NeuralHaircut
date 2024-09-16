@@ -38,33 +38,30 @@ def create_scalp_mask(scalp_mesh, scalp_uvs):
 
 def main(args):
 
-    # indices of scalp vertices
+    # indices of scalp vertices and faces that form a scalp
     scalp_vert_idx = torch.load('./data/new_scalp_vertex_idx.pth').long().cuda()
-    # faces that form a scalp
     scalp_faces = torch.load('./data/new_scalp_faces.pth')[None].cuda() 
     scalp_uvs = torch.load('./data/new_scalp_uvcoords.pth')[None].cuda()
 
-    path_to_mesh = os.path.join(args.path_to_data, args.scene_type, args.case, 'head_prior.obj')
-    path_to_ckpt = os.path.join(args.path_to_data, args.scene_type, args.case, 'ckpt_final.pth')
+    path_to_flame_prior = os.path.join(args.dataset_path, args.case, "neural_haircut",'head_prior.obj')
+    path_to_ckpt = os.path.join(args.path_to_data, args.case, 'ckpt_final.pth')
     
-    save_path = os.path.join(args.path_to_data, args.scene_type, args.case)
+    save_path = os.path.join(args.path_to_data, args.case)
     
     # Upload FLAME head geometry
-    head_mesh = load_objs_as_meshes([path_to_mesh], device=args.device)
-    verts, faces, _ = load_obj(path_to_mesh)
+    head_mesh = load_objs_as_meshes([path_to_flame_prior], device=args.device)
+    verts, faces, _ = load_obj(path_to_flame_prior)
     head_mesh =  Meshes(verts=[(verts).float()], faces=[faces.verts_idx]).cuda()
     
     # Convert the head mesh into a scalp mesh
     scalp_verts = head_mesh.verts_packed()[None, scalp_vert_idx]
-    scalp_face_verts = face_vertices(scalp_verts, scalp_faces)[0]
+    # scalp_face_verts = face_vertices(scalp_verts, scalp_faces)[0]
     scalp_mesh = Meshes(verts=scalp_verts, faces=scalp_faces).cuda()
     
     # Upload config  
-
-    with open(args.conf_path, 'r') as f:
-        replaced_conf = str(yaml.load(f, Loader=yaml.Loader)).replace('CASE_NAME', args.case)
+    with open(args.conf, 'r') as f:
+        replaced_conf = str(yaml.load(f, Loader=yaml.Loader)).replace('CASE_NAME', args.case).replace('DATASET_PATH', args.dataset_path)
         conf = yaml.load(replaced_conf, Loader=yaml.Loader)
-            
 
     hair_network = HairSDFNetwork(**conf['model']['hair_sdf_network']).to(args.device)
     checkpoint = torch.load(path_to_ckpt, map_location=args.device)
@@ -85,12 +82,9 @@ def main(args):
 
     faces_masked = []
     for face in scalp_mesh.faces_packed():
-#         print(face[0] , full_scalp_list)
-#         input()
         if face[0] in full_scalp_list and face[1] in full_scalp_list and  face[2] in full_scalp_list:
             faces_masked.append(torch.tensor([d[int(face[0])], d[int(face[1])], d[int(face[2])]]))
-#         print(faces_masked, full_scalp_list)
-        save_obj(os.path.join(save_path, 'scalp.obj'), scalp_mesh.verts_packed()[full_scalp_list], torch.stack(faces_masked))
+    save_obj(os.path.join(save_path, 'scalp.obj'), scalp_mesh.verts_packed()[full_scalp_list], torch.stack(faces_masked))
 
     with open(os.path.join(save_path, 'cut_scalp_verts.pickle'), 'wb') as f:
         pickle.dump(list(torch.tensor(sorted_idx).detach().cpu().numpy()), f)
@@ -105,17 +99,11 @@ def main(args):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(conflict_handler='resolve')
-
-    parser.add_argument('--conf_path', default='./configs/monocular/neural_strands.yaml', type=str)
-        
-    parser.add_argument('--case', default='person_1', type=str)
-    
-    parser.add_argument('--scene_type', default='monocular', type=str, choices=['h3ds', 'monocular']) 
-    
+    parser.add_argument('--conf', default='./configs/monocular/neural_strands.yaml', type=str)
+    parser.add_argument('--dataset_path', type=str, default="../Datasets/usc_colmap")
+    parser.add_argument('--case', default='00050', type=str)
     parser.add_argument('--path_to_data', default='./implicit-hair-data/data/', type=str)  
-
     parser.add_argument('--device', default='cuda', type=str)
-    
     parser.add_argument('--distance', default=0.07, type=float)
 
     

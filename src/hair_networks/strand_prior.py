@@ -382,7 +382,6 @@ class Encoder(nn.Module):
 class Decoder(nn.Module):
     def __init__(self, config, latent_dim=64, length=99):
         super().__init__()
-        print(f'iam decoder with latent dim {latent_dim}')
         net = SirenNet(
             dim_in = 1,
             dim_hidden = 256,

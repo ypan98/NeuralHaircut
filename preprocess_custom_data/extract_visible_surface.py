@@ -61,9 +61,8 @@ def check_visiblity_of_faces(cams, meshRasterizer, full_mesh, mesh_head, n_views
     
 def main(args):
     
-    scene_type = args.scene_type
     case = args.case
-    save_path = f'./implicit-hair-data/data/{scene_type}/{case}'
+    save_path = f'./implicit-hair-data/data/{case}'
                              
     # upload mesh hair and bust
     verts, faces = load_ply(os.path.join(save_path, 'final_hair.ply'))
@@ -103,26 +102,14 @@ def main(args):
 
 
     # take from config dataset parameters
-    with open(args.conf_path, 'r') as f:
-        replaced_conf = str(yaml.load(f, Loader=yaml.Loader)).replace('CASE_NAME', args.case)
+    with open(args.conf, 'r') as f:
+        replaced_conf = str(yaml.load(f, Loader=yaml.Loader)).replace('CASE_NAME', args.case).replace('DATASET_PATH', args.dataset_path)
         conf = yaml.load(replaced_conf, Loader=yaml.Loader)
             
 
-    if scene_type == 'h3ds':
-        dataset = Dataset(conf['dataset'])
-    else:
-        dataset = MonocularDataset(conf['dataset'])
+    dataset = MonocularDataset(conf['dataset'])
 
-
-    # add upper cameras for h3ds data as they haven't got such views
     cams_up = []
-    if scene_type == 'h3ds':
-        elevs = [-100, -90, -80]
-        for elev in elevs:
-            R, T = look_at_view_transform(dist=2., elev=elev, azim=100)
-            cam = FoVPerspectiveCameras(device=args.device, R=R, T=T)
-            cams_up.append(cam)
-
     # add dataset cameras
     intrinsics_all = dataset.intrinsics_all #intrinsics
     pose_all_inv = torch.inverse(dataset.pose_all) #extrinsics
@@ -143,18 +130,12 @@ def main(args):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(conflict_handler='resolve')
-
-    parser.add_argument('--conf_path', default='./configs/monocular/neural_strands.yaml', type=str)
-    
-    parser.add_argument('--case', default='person_1', type=str)
-    
-    parser.add_argument('--scene_type', default='monocular', type=str) 
-    
+    parser.add_argument('--conf', default='./configs/monocular/neural_strands.yaml', type=str)
+    parser.add_argument('--dataset_path', type=str, default="../Datasets/usc_colmap")
+    parser.add_argument('--case', default='00050', type=str)
     parser.add_argument('--device', default='cuda', type=str)
-    
     parser.add_argument('--img_size', default=2160, type=int)
     parser.add_argument('--n_views', default=2, type=int)
-    
     args, _ = parser.parse_known_args()
     args = parser.parse_args()
 

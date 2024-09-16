@@ -46,20 +46,7 @@ class Runner:
             replaced_conf = str(yaml.load(f, Loader=yaml.Loader)).replace('CASE_NAME', case).replace('DATASET_PATH', dataset_path)
             self.conf = yaml.load(replaced_conf, Loader=yaml.Loader)
 
-        if exp_name is not None:
-            date, time = str(datetime.today()).split('.')[0].split(' ')
-            exps_dir = Path('./exps_first_stage') / exp_name / case / Path(conf_path).stem
-            if is_continue:
-                prev_exps = sorted(exps_dir.iterdir())
-                if len(prev_exps) > 0:
-                    cur_dir = prev_exps[-1].name
-                else:
-                    raise FileNotFoundError(errno.ENOENT, "No previous experiment in directory", exps_dir)
-            else:
-                cur_dir = date + '_' + time   
-            self.base_exp_dir =  exps_dir / cur_dir        
-        else:
-            self.base_exp_dir = self.conf['general']['base_exp_dir']
+        self.base_exp_dir = self.conf['general']['base_exp_dir'] / "first_stage"
         os.makedirs(self.base_exp_dir, exist_ok=True)
         
 

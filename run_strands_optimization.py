@@ -33,37 +33,27 @@ import warnings
 warnings.filterwarnings("ignore")
     
 class Runner:
-    def __init__(self, conf_path, case='CASE_NAME', scene_type='DATASET_TYPE', checkpoint_name=None, hair_conf_path=None, exp_name=None):
-        
+    def __init__(self, conf_path, dataset_path, case='CASE_NAME', checkpoint_name=None, hair_conf_path=None):
         self.device = torch.device('cuda')
-        
         # Configuration of geometry      
         self.conf_path = conf_path 
         with open(conf_path, 'r') as f:
-            replaced_conf = str(yaml.load(f, Loader=yaml.Loader)).replace('CASE_NAME', case)
+            replaced_conf = str(yaml.load(f, Loader=yaml.Loader)).replace('CASE_NAME', case).replace('DATASET_PATH', dataset_path)
             self.conf = yaml.load(replaced_conf, Loader=yaml.Loader)
         
         # Configuration of hair strands
         self.hair_conf_path = hair_conf_path
         with open(hair_conf_path, 'r') as f:
             replaced_conf = str(yaml.load(f, Loader=yaml.Loader)).replace('CASE_NAME', case)
-            replaced_conf = replaced_conf.replace('DATASET_TYPE', scene_type)
             self.hair_conf = yaml.load(replaced_conf, Loader=yaml.Loader)
         
 
         train_conf = self.conf['train']
-        
         self.end_iter = train_conf['end_iter']
         self.report_freq = train_conf['report_freq']
         self.batch_size = train_conf['batch_size']
         
-        if exp_name is not None:
-            date, time = str(datetime.today()).split('.')[0].split(' ')
-            exps_dir = Path('./exps_second_stage') / exp_name / case / Path(conf_path).stem
-            cur_dir = date + '_' + time   
-            self.base_exp_dir =  exps_dir / cur_dir        
-        else:
-            self.base_exp_dir = self.conf['general']['base_exp_dir']
+        self.base_exp_dir = self.conf['general']['base_exp_dir'] / "seoncd_stage"
                  
         self.img_size = self.hair_conf['render']['image_size']
         
@@ -71,10 +61,7 @@ class Runner:
         os.makedirs(os.path.join(self.base_exp_dir, 'meshes'), exist_ok=True)
         os.makedirs(os.path.join(self.base_exp_dir, 'hair_primitives'), exist_ok=True)
         
-        if scene_type == 'h3ds':
-            self.dataset = Dataset(self.conf['dataset'])
-        else:
-            self.dataset = MonocularDataset(self.conf['dataset'])
+        self.dataset = MonocularDataset(self.conf['dataset'])
         
         self.iter_step = 0
 
@@ -87,7 +74,10 @@ class Runner:
         
 #         Upload volumetric geometry and surface orientation fields
         if train_conf['pretrain_path']:
-            print('Upload sdf hair geometry and orientation field!')
+            # hair network checkpoint
+            outer_mesh_path = self.hair_conf["sdf_chamfer"]["mesh_outer_hair_remeshed"]
+            folder_path = '/'.join(outer_mesh_path.split('/')[:-1])
+            train_conf["pretrain_path"] = os.path.join(folder_path, "ckpt_final.pth")
             checkpoint = torch.load(train_conf['pretrain_path'], map_location=self.device)
             self.hair_network.load_state_dict(checkpoint['hair_network'])
 
@@ -105,7 +95,6 @@ class Runner:
         self.writer = SummaryWriter(log_dir=os.path.join(self.base_exp_dir, 'logs'))
         image_perm = self.get_image_perm()
         losses = {}
-
         
         bound_min = torch.tensor(self.dataset.object_bbox_min, dtype=torch.float32)
         bound_max = torch.tensor(self.dataset.object_bbox_max, dtype=torch.float32)
@@ -157,10 +146,11 @@ class Runner:
     def save_strands_pointcloud(self):
         if self.hair_primitives_trainer:
             strands_origins = self.hair_primitives_trainer.strands_origins.reshape(-1, 100, 3)
-            
             cols = torch.cat((torch.rand(strands_origins.shape[0], 3).unsqueeze(1).repeat(1, 100, 1), torch.ones(strands_origins.shape[0], 100, 1)), dim=-1).reshape(-1, 4).cpu()           
             trimesh.PointCloud(strands_origins.reshape(-1, 3).detach().cpu(), colors=cols).export(os.path.join(self.base_exp_dir, 'meshes', '{:0>8d}_strands_points.ply'.format(self.iter_step)))
-
+            strands_np = strands_origins.detach().cpu().numpy()
+            np.save(os.path.join(self.base_exp_dir, 'meshes', '{:0>8d}_strands_points.npy'.format(self.iter_step)), strands_np)
+    
     
     def get_image_perm(self):
         return torch.randperm(self.dataset.n_images)
@@ -186,15 +176,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--conf', type=str, default='./confs/base.conf')
     parser.add_argument('--gpu', type=int, default=0)
+    parser.add_argument('--dataset_path', type=str, default="../Datasets/usc_colmap")
     parser.add_argument('--case', type=str, default='')
-    parser.add_argument('--scene_type', type=str, default='')
     parser.add_argument('--hair_conf', type=str, default=None, help='Use hair primitives config')
     parser.add_argument('--checkpoint', type=str, default=None, help='Checkpoint to continue training')
-    parser.add_argument('--exp_name', type=str, default=None)
 
     args = parser.parse_args()
 
     torch.cuda.set_device(args.gpu)
-    runner = Runner(args.conf,  args.case, args.scene_type, hair_conf_path=args.hair_conf, checkpoint_name=args.checkpoint, exp_name=args.exp_name)
+    runner = Runner(args.conf, args.dataset_path, args.case, hair_conf_path=args.hair_conf, checkpoint_name=args.checkpoint)
 
     runner.train()

@@ -130,6 +130,8 @@ dmypy.json
 
 experiments/
 exp/
+exps_second_stage/
+implicit-hair-data/
 
 pretrained_models
 CDGNet
