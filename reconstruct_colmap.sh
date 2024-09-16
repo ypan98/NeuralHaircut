@@ -24,7 +24,7 @@ mkdir $nh_data_folder_sparse
 # Stage 1
 echo "************************ Preprocessing for STAGE 1 ************************"
 echo "Step 1: Converting raw COLMAP to txt"
-colmap model_converter --input_path $colmap_data_folder/sparse/0  --output_path $nh_data_folder_sparse --output_type TXT
+colmap model_converter --input_path $colmap_case_folder/sparse/0  --output_path $nh_data_folder_sparse --output_type TXT
 echo "Step 2: Parsing txt files to neural haircut format"
 python preprocess_custom_data/colmap_parsing.py --path_to_scene  $nh_data_folder --save_path $nh_data_folder
 echo "Step 3: Scaling scene into sphere"
@@ -35,13 +35,16 @@ echo "Step 5: Calculating orientation maps"
 python preprocess_custom_data/calc_orientation_maps.py --img_path $nh_data_folder/image/ --orient_dir $nh_data_folder/orientation_maps --conf_dir $nh_data_folder/confidence_maps
 echo "Step 6: Flame fitting"
 echo "Step 6.1: Pixie Initialization"
+
+echo $nh_data_folder/image/ 
+echo $nh_data_folder
 python $pixie_folder/demos/pixie_initialization.py --inputpath $nh_data_folder/image/ --savefolder $nh_data_folder
 echo "Step 6.2: Multiview Optimization"
 python src/multiview_optimization/fit.py --data_path $nh_data_folder --save_path ./experiments/fit_person_1_bs_1/$case
 python src/multiview_optimization/fit.py --data_path $nh_data_folder --batch_size 5 --save_path  ./experiments/fit_person_1_bs_5/$case --checkpoint_path ./experiments/fit_person_1_bs_1/$case/opt_params
 python src/multiview_optimization/fit.py --data_path $nh_data_folder --batch_size 20 --train_shape True --save_path  ./experiments/fit_person_1_bs_20_train_rot_shape/$case  --checkpoint_path ./experiments/fit_person_1_bs_5/$case/opt_params
 echo "Step 6.3: Copying fitted flame to $nh_data_folder/head_prior.obj"
-fitted_flame=$(ls ./experiments/fit_person_1_bs_20_train_rot_shape/mesh/ | sort -n | tail -n 1)
+fitted_flame=$(ls ./experiments/fit_person_1_bs_20_train_rot_shape/$case/mesh/ | sort -n | tail -n 1)
 cp ./experiments/fit_person_1_bs_20_train_rot_shape/$case/mesh/$fitted_flame $nh_data_folder/head_prior.obj
 echo "Step 7: Cut eyes of FLAME head, needed for scalp regularizaton"
 python preprocess_custom_data/cut_eyes.py --path_to_scene $nh_data_folder

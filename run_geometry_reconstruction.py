@@ -46,7 +46,7 @@ class Runner:
             replaced_conf = str(yaml.load(f, Loader=yaml.Loader)).replace('CASE_NAME', case).replace('DATASET_PATH', dataset_path)
             self.conf = yaml.load(replaced_conf, Loader=yaml.Loader)
 
-        self.base_exp_dir = self.conf['general']['base_exp_dir'] / "first_stage"
+        self.base_exp_dir = Path(self.conf['general']['base_exp_dir']) / "first_stage"
         os.makedirs(self.base_exp_dir, exist_ok=True)
         
 
@@ -393,10 +393,6 @@ class Runner:
             if losses is not None:
                 for k, v in losses.items():
                     self.writer.add_scalar(f'Loss/{k}', v, self.iter_step)
-
-            if self.iter_step % self.report_freq == 0:
-                print(self.base_exp_dir)
-                print('iter:{:8>d} loss = {} lr={}'.format(self.iter_step, loss, self.optimizer.param_groups[0]['lr']))
 
             if self.iter_step % self.save_freq == 0:
                 self.save_checkpoint()

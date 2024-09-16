@@ -53,7 +53,7 @@ class Runner:
         self.report_freq = train_conf['report_freq']
         self.batch_size = train_conf['batch_size']
         
-        self.base_exp_dir = self.conf['general']['base_exp_dir'] / "seoncd_stage"
+        self.base_exp_dir = Path(self.conf['general']['base_exp_dir']) / "seoncd_stage"
                  
         self.img_size = self.hair_conf['render']['image_size']
         
