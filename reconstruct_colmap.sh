@@ -35,9 +35,6 @@ echo "Step 5: Calculating orientation maps"
 python preprocess_custom_data/calc_orientation_maps.py --img_path $nh_data_folder/image/ --orient_dir $nh_data_folder/orientation_maps --conf_dir $nh_data_folder/confidence_maps
 echo "Step 6: Flame fitting"
 echo "Step 6.1: Pixie Initialization"
-
-echo $nh_data_folder/image/ 
-echo $nh_data_folder
 python $pixie_folder/demos/pixie_initialization.py --inputpath $nh_data_folder/image/ --savefolder $nh_data_folder
 echo "Step 6.2: Multiview Optimization"
 python src/multiview_optimization/fit.py --data_path $nh_data_folder --save_path ./experiments/fit_person_1_bs_1/$case
