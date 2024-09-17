@@ -349,5 +349,8 @@ dependencies:
       - tensorboardx==2.6
       - face-alignment==1.3.4
       - open3d==0.18.0
-      - torch-scatter==2.1.1+pt113cu116 # or manually https://data.pyg.org/whl/torch-1.13.0%2Bcu116/torch_scatter-2.1.1%2Bpt113cu116-cp39-cp39-linux_x86_64.whl
+      - https://data.pyg.org/whl/torch-1.13.0%2Bcu116/torch_scatter-2.1.1%2Bpt113cu116-cp39-cp39-linux_x86_64.whl
+      # PIXIE
+      - chumpy>=0.69
+      - ninja
 prefix: /home/violet-common/conda/envs/pytorch3d
