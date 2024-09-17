@@ -46,6 +46,16 @@ gdown --folder https://drive.google.com/drive/folders/1TCdJ0CKR3Q6LviovndOkJaKm8
 
 ## Running
 
+### From COLMAP data
+This modified version can run the whole pipeline including all necessary preprocessing from colmap data.
+For this:
+```bash
+chmod +777 reconstruct_colmap.sh
+./reconstruct_colmap.sh $PATH_TO_COLMAP_DATA $CASE_ID 
+```
+where $PATH_TO_COLMAP_DATA points to a directory containing subfolders, and $CASE_ID represents the name of the specific subfolder containing colmap generated files.
+Note that for one of the preprocessing steps PIXIE is needed. This is described in [preprocess_custom_data.](./preprocess_custom_data). After setting it up, change the PIXIE folder path in reconstruct_colmap.sh
+
 ### Fitting the FLAME coarse geometry using multiview images
 
 More details could be find in [multiview_optimization](./src/multiview_optimization)
@@ -132,8 +142,6 @@ booktitle = {Proceedings of IEEE International Conference on Computer Vision (IC
 year = {2023}
 } 
 ```
-
-
 
 
 
