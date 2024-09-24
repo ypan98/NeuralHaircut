@@ -512,7 +512,7 @@ class Runner:
         rays_d = torch.matmul(cam_pose_[None, None, :3, :3], rays_d[:, :, :, None]).squeeze()  # W, H, 3
         rays_o = cam_pose_[None, None, :3, 3].expand(rays_d.shape)  # W, H, 3
 
-        H, W, _ = rays_o.shape
+        W, H, _ = rays_o.shape
 
         rays_o = rays_o.transpose(0, 1).reshape(-1, 3).split(self.batch_size)
         rays_d = rays_d.transpose(0, 1).reshape(-1, 3).split(self.batch_size)
@@ -770,7 +770,7 @@ class Runner:
         rays_d = torch.matmul(cam_pose_[None, None, :3, :3], rays_d[:, :, :, None]).squeeze()  # W, H, 3
         rays_o = cam_pose_[None, None, :3, 3].expand(rays_d.shape)  # W, H, 3
         
-        H, W, _ = rays_o.shape
+        W, H, _ = rays_o.shape
         rays_o = rays_o.transpose(0, 1).reshape(-1, 3).split(800)
         rays_d = rays_d.transpose(0, 1).reshape(-1, 3).split(800)
         radii = radii.reshape(-1, 1).split(800)
