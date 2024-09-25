@@ -149,7 +149,7 @@ def main(args):
     hair_mask_path = args.path_to_scene + '/../masks'
     if hair_mask_path is not None and os.path.exists(hair_mask_path):
         print("Hair masks found, copying them to the scene folder")
-        hair_masks = os.listdir(hair_mask_path)
+        hair_masks = sorted(os.listdir(hair_mask_path))
         for i, hair_mask_file in enumerate(hair_masks):
             hair_mask = Image.open(os.path.join(hair_mask_path, hair_mask_file))
             hair_mask = np.asarray(hair_mask.resize(resolution, Image.BICUBIC))
