@@ -18,13 +18,17 @@ def main(args):
     # Parse colmap cameras and used images
     with open(camera_file) as f:
         lines = f.readlines()
-
-        u = float(lines[3].split()[4])
-        h, w = [int(x) for x in lines[3].split()[5: 7]]
-
+        splitted_line = lines[3].split()
+        fx = float(splitted_line[4])
+        fy = fx
+        w, h = [int(x) for x in splitted_line[5:7]]
+        if splitted_line[1] == "PINHOLE":
+            fy = float(splitted_line[5])
+            w = int(splitted_line[6])
+            h = int(splitted_line[7])
         intrinsic_matrix = np.array([
-            [u, 0, h, 0],
-            [0, u, w, 0],
+            [fx, 0, w, 0],
+            [0, fy, h, 0],
             [0, 0, 1, 0],
             [0, 0, 0, 1]
         ])
@@ -82,7 +86,8 @@ def main(args):
     cameras = []
     debug = False
 
-    for i, k in enumerate(data.keys()):
+    keys = sorted(list(data.keys()))
+    for i, k in enumerate(keys):
         filename = f'img_{i:04}.png'
         T = data[k]
         cameras.append(T)
